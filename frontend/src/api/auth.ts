@@ -24,8 +24,9 @@ export function useAuth() {
     const res = await api.post('/auth/login', form, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     })
-    const { access_token, user: u } = res.data
+    const { access_token, refresh_token, user: u } = res.data
     localStorage.setItem('access_token', access_token)
+    localStorage.setItem('refresh_token', refresh_token)
     localStorage.setItem('user', JSON.stringify(u))
     setToken(access_token)
     setUser(u)
@@ -37,9 +38,13 @@ export function useAuth() {
     return res.data
   }, [])
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('user')
+  const logout = useCallback(async () => {
+    const refreshToken = localStorage.getItem('refresh_token')
+    if (refreshToken) {
+      // Best-effort — invalidate on server; ignore errors
+      await api.post('/auth/logout', { refresh_token: refreshToken }).catch(() => {})
+    }
+    localStorage.clear()
     setToken(null)
     setUser(null)
   }, [])
