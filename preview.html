@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MarketingOS — UI Preview</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { colors: { brand: {
+      50:'#eff6ff',100:'#dbeafe',500:'#3b82f6',
+      600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a'
+    }}}}
+  }
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .tab-btn { cursor:pointer; transition:all .15s; }
+  .tab-btn.active { background:#2563eb; color:#fff; }
+  .sidebar-link { display:flex; align-items:center; gap:10px; padding:10px 14px;
+    border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; color:#4B5563;
+    transition:all .15s; }
+  .sidebar-link:hover { background:#F3F4F6; color:#111827; }
+  .sidebar-link.active { background:#EFF6FF; color:#1D4ED8; }
+  .card { background:#fff; border-radius:12px; border:1px solid #E5E7EB;
+    padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .badge { display:inline-flex; align-items:center; padding:2px 10px;
+    border-radius:999px; font-size:12px; font-weight:500; }
+  .page { display:none; }
+  .page.active { display:block; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+<!-- ─── LOGIN PAGE ──────────────────────────────────────────────────────── -->
+<div id="login-screen">
+<div class="min-h-screen bg-gradient-to-br from-blue-800 to-blue-600 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">📈 MarketingOS</h1>
+      <p class="text-gray-500 mt-1">Marketing Performance Reporting</p>
+    </div>
+    <div class="flex bg-gray-100 rounded-lg p-1 mb-6">
+      <div class="flex-1 py-2 text-sm font-medium text-center bg-white shadow rounded-md text-blue-700">Sign In</div>
+      <div class="flex-1 py-2 text-sm font-medium text-center text-gray-500 cursor-pointer">Sign Up</div>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <input class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          type="email" placeholder="you@company.com" value="demo@marketingos.com"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+        <input class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          type="password" placeholder="••••••••" value="demo1234"/>
+      </div>
+      <button onclick="showApp()"
+        class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+        Sign In →
+      </button>
+    </div>
+    <p class="text-center text-xs text-gray-400 mt-6">Demo credentials pre-filled · click Sign In</p>
+  </div>
+</div>
+</div>
+
+<!-- ─── MAIN APP ─────────────────────────────────────────────────────────── -->
+<div id="app-screen" style="display:none">
+<div class="flex h-screen">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+    <div class="p-6 border-b border-gray-200">
+      <h1 class="text-xl font-bold text-blue-800">📈 MarketingOS</h1>
+      <p class="text-xs text-gray-400 mt-0.5">Reporting Platform</p>
+    </div>
+    <nav class="flex-1 p-4 space-y-1">
+      <div class="sidebar-link active" onclick="showPage('dashboard',this)">▦ Dashboard</div>
+      <div class="sidebar-link" onclick="showPage('clients',this)">👥 Clients</div>
+      <div class="sidebar-link" onclick="showPage('reports',this)">📊 Reports</div>
+      <div class="sidebar-link" onclick="showPage('integrations',this)">🔗 Integrations</div>
+    </nav>
+    <div class="p-4 border-t border-gray-200">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold">D</div>
+        <div>
+          <p class="text-sm font-medium text-gray-900">Dana Cohen</p>
+          <p class="text-xs text-gray-400">manager</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('app-screen').style.display='none';document.getElementById('login-screen').style.display='block'"
+        class="w-full py-1.5 text-xs border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">Sign out</button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="flex-1 overflow-auto bg-gray-50">
+
+    <!-- ── DASHBOARD ────────────────────────────────────────────────────── -->
+    <div id="page-dashboard" class="page active p-6 space-y-6">
+      <div>
+        <h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
+        <p class="text-gray-500 text-sm mt-1">Overview of your marketing performance</p>
+      </div>
+      <!-- Stats bar -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="card text-center"><p class="text-3xl font-bold text-blue-600">4</p><p class="text-sm text-gray-500 mt-1">Active Clients</p></div>
+        <div class="card text-center"><p class="text-3xl font-bold text-blue-600">17</p><p class="text-sm text-gray-500 mt-1">Reports Generated</p></div>
+        <div class="card text-center"><p class="text-3xl font-bold text-blue-600">50+</p><p class="text-sm text-gray-500 mt-1">Supported Platforms</p></div>
+      </div>
+      <!-- KPI cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="card"><p class="text-sm text-gray-500">Total Spend</p><p class="text-2xl font-bold mt-1">$8,380</p><p class="text-xs mt-1 text-green-600 font-medium">▲ 12.4% vs last period</p></div>
+        <div class="card"><p class="text-sm text-gray-500">Total Conversions</p><p class="text-2xl font-bold mt-1">279</p><p class="text-xs mt-1 text-green-600 font-medium">▲ 8.1% vs last period</p></div>
+        <div class="card"><p class="text-sm text-gray-500">Avg ROAS</p><p class="text-2xl font-bold mt-1">3.73x</p><p class="text-xs mt-1 text-green-600 font-medium">▲ 2.3% vs last period</p></div>
+        <div class="card"><p class="text-sm text-gray-500">Avg CPC</p><p class="text-2xl font-bold mt-1">$1.84</p><p class="text-xs mt-1 text-red-500 font-medium">▼ 5.2% vs last period</p></div>
+      </div>
+      <!-- Charts row -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="card">
+          <h3 class="text-sm font-semibold text-gray-700 mb-4">Daily Spend by Platform ($)</h3>
+          <canvas id="spendChart" height="160"></canvas>
+        </div>
+        <div class="card">
+          <h3 class="text-sm font-semibold text-gray-700 mb-4">Conversions & ROAS</h3>
+          <canvas id="convChart" height="160"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CLIENTS ──────────────────────────────────────────────────────── -->
+    <div id="page-clients" class="page p-6 space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900">Clients</h2>
+          <p class="text-gray-500 text-sm mt-1">4 active clients</p>
+        </div>
+        <button class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">+ New Client</button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <!-- Client cards -->
+        <div class="card hover:shadow-md transition-shadow">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background:#3B82F6">N</div>
+              <div><p class="font-semibold text-gray-900">Nike Israel</p><p class="text-xs text-gray-500">Nike Inc.</p></div>
+            </div>
+            <span class="text-xs text-gray-400 cursor-pointer hover:text-red-500">✕</span>
+          </div>
+          <p class="text-xs text-gray-500 mt-3">marketing@nike.co.il</p>
+          <p class="text-xs text-gray-400 mt-2">Added Apr 1, 2024</p>
+        </div>
+        <div class="card hover:shadow-md transition-shadow">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background:#10B981">S</div>
+              <div><p class="font-semibold text-gray-900">SuperPharm</p><p class="text-xs text-gray-500">SuperPharm Ltd.</p></div>
+            </div>
+            <span class="text-xs text-gray-400 cursor-pointer hover:text-red-500">✕</span>
+          </div>
+          <p class="text-xs text-gray-500 mt-3">digital@superpharm.co.il</p>
+          <p class="text-xs text-gray-400 mt-2">Added Apr 5, 2024</p>
+        </div>
+        <div class="card hover:shadow-md transition-shadow">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background:#F59E0B">H</div>
+              <div><p class="font-semibold text-gray-900">Hot Mobile</p><p class="text-xs text-gray-500">Hot Telecommunication</p></div>
+            </div>
+            <span class="text-xs text-gray-400 cursor-pointer hover:text-red-500">✕</span>
+          </div>
+          <p class="text-xs text-gray-500 mt-3">ads@hot.net.il</p>
+          <p class="text-xs text-gray-400 mt-2">Added Apr 12, 2024</p>
+        </div>
+        <div class="card hover:shadow-md transition-shadow">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background:#8B5CF6">Z</div>
+              <div><p class="font-semibold text-gray-900">Zara Israel</p><p class="text-xs text-gray-500">Inditex Group</p></div>
+            </div>
+            <span class="text-xs text-gray-400 cursor-pointer hover:text-red-500">✕</span>
+          </div>
+          <p class="text-xs text-gray-500 mt-3">zara-il@inditex.com</p>
+          <p class="text-xs text-gray-400 mt-2">Added Apr 18, 2024</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── REPORTS ──────────────────────────────────────────────────────── -->
+    <div id="page-reports" class="page p-6 space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900">Reports</h2>
+          <p class="text-gray-500 text-sm mt-1">5 reports total</p>
+        </div>
+        <button class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">+ Generate Report</button>
+      </div>
+      <div class="card">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-200">
+              <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Title</th>
+              <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Format</th>
+              <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Frequency</th>
+              <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
+              <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Generated</th>
+              <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <tr class="hover:bg-gray-50">
+              <td class="py-3 px-4 font-medium">April Performance Report</td>
+              <td class="py-3 px-4">📄 PDF</td>
+              <td class="py-3 px-4">Monthly</td>
+              <td class="py-3 px-4"><span class="badge bg-green-100 text-green-800">completed</span></td>
+              <td class="py-3 px-4 text-gray-500">Apr 23, 2024</td>
+              <td class="py-3 px-4"><a href="#" class="text-blue-600 text-xs mr-2">Download</a><span class="text-red-400 text-xs cursor-pointer">Delete</span></td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="py-3 px-4 font-medium">Nike Weekly Summary</td>
+              <td class="py-3 px-4">📊 EXCEL</td>
+              <td class="py-3 px-4">Weekly</td>
+              <td class="py-3 px-4"><span class="badge bg-green-100 text-green-800">completed</span></td>
+              <td class="py-3 px-4 text-gray-500">Apr 22, 2024</td>
+              <td class="py-3 px-4"><a href="#" class="text-blue-600 text-xs mr-2">Download</a><span class="text-red-400 text-xs cursor-pointer">Delete</span></td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="py-3 px-4 font-medium">SuperPharm Q1 Deck</td>
+              <td class="py-3 px-4">📑 POWERPOINT</td>
+              <td class="py-3 px-4">Manual</td>
+              <td class="py-3 px-4"><span class="badge bg-blue-100 text-blue-800">processing</span></td>
+              <td class="py-3 px-4 text-gray-500">—</td>
+              <td class="py-3 px-4"><span class="text-red-400 text-xs cursor-pointer">Delete</span></td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="py-3 px-4 font-medium">Hot Mobile Daily</td>
+              <td class="py-3 px-4">📄 PDF</td>
+              <td class="py-3 px-4">Daily</td>
+              <td class="py-3 px-4"><span class="badge bg-yellow-100 text-yellow-800">pending</span></td>
+              <td class="py-3 px-4 text-gray-500">—</td>
+              <td class="py-3 px-4"><span class="text-red-400 text-xs cursor-pointer">Delete</span></td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="py-3 px-4 font-medium">Zara Campaign Report</td>
+              <td class="py-3 px-4">📊 EXCEL</td>
+              <td class="py-3 px-4">Manual</td>
+              <td class="py-3 px-4"><span class="badge bg-red-100 text-red-800">failed</span></td>
+              <td class="py-3 px-4 text-gray-500">—</td>
+              <td class="py-3 px-4"><span class="text-red-400 text-xs cursor-pointer">Delete</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── INTEGRATIONS ─────────────────────────────────────────────────── -->
+    <div id="page-integrations" class="page p-6 space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900">Integrations</h2>
+          <p class="text-gray-500 text-sm mt-1">Connect your marketing platforms</p>
+        </div>
+        <button class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">+ Connect Platform</button>
+      </div>
+      <!-- Client selector -->
+      <div class="flex gap-2">
+        <span class="px-4 py-1.5 rounded-full text-sm font-medium bg-blue-600 text-white cursor-pointer">Nike Israel</span>
+        <span class="px-4 py-1.5 rounded-full text-sm font-medium bg-white text-gray-600 border border-gray-300 cursor-pointer hover:border-blue-400">SuperPharm</span>
+        <span class="px-4 py-1.5 rounded-full text-sm font-medium bg-white text-gray-600 border border-gray-300 cursor-pointer hover:border-blue-400">Hot Mobile</span>
+        <span class="px-4 py-1.5 rounded-full text-sm font-medium bg-white text-gray-600 border border-gray-300 cursor-pointer hover:border-blue-400">Zara Israel</span>
+      </div>
+      <!-- Integration cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div class="card hover:shadow-md transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-3"><span class="text-2xl">🔵</span><div><p class="font-semibold text-sm">Google Ads</p><p class="text-xs text-gray-400">google_ads</p></div></div>
+            <span class="badge bg-green-100 text-green-800">active</span>
+          </div>
+          <p class="text-xs text-gray-400 mb-3">Last synced: Apr 23, 2024 09:12</p>
+          <div class="flex gap-2 mt-3"><button class="text-xs py-1 px-3 border border-gray-300 rounded-lg hover:bg-gray-50">⚡ Test</button><button class="text-xs py-1 px-3 text-red-500 border border-red-200 rounded-lg hover:border-red-400">Remove</button></div>
+        </div>
+        <div class="card hover:shadow-md transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-3"><span class="text-2xl">🔷</span><div><p class="font-semibold text-sm">Facebook Ads</p><p class="text-xs text-gray-400">facebook_ads</p></div></div>
+            <span class="badge bg-green-100 text-green-800">active</span>
+          </div>
+          <p class="text-xs text-gray-400 mb-3">Last synced: Apr 23, 2024 09:10</p>
+          <div class="flex gap-2 mt-3"><button class="text-xs py-1 px-3 border border-gray-300 rounded-lg hover:bg-gray-50">⚡ Test</button><button class="text-xs py-1 px-3 text-red-500 border border-red-200 rounded-lg hover:border-red-400">Remove</button></div>
+        </div>
+        <div class="card hover:shadow-md transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-3"><span class="text-2xl">🎵</span><div><p class="font-semibold text-sm">TikTok Ads</p><p class="text-xs text-gray-400">tiktok_ads</p></div></div>
+            <span class="badge bg-yellow-100 text-yellow-800">pending</span>
+          </div>
+          <p class="text-xs text-gray-400 mb-3">Not yet synced</p>
+          <div class="flex gap-2 mt-3"><button class="text-xs py-1 px-3 border border-gray-300 rounded-lg hover:bg-gray-50">⚡ Test</button><button class="text-xs py-1 px-3 text-red-500 border border-red-200 rounded-lg hover:border-red-400">Remove</button></div>
+        </div>
+        <div class="card hover:shadow-md transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-3"><span class="text-2xl">💼</span><div><p class="font-semibold text-sm">LinkedIn Ads</p><p class="text-xs text-gray-400">linkedin_ads</p></div></div>
+            <span class="badge bg-red-100 text-red-800">error</span>
+          </div>
+          <p class="text-xs text-red-500 mb-3 truncate">⚠ Token expired, please reconnect</p>
+          <div class="flex gap-2 mt-3"><button class="text-xs py-1 px-3 border border-gray-300 rounded-lg hover:bg-gray-50">⚡ Test</button><button class="text-xs py-1 px-3 text-red-500 border border-red-200 rounded-lg hover:border-red-400">Remove</button></div>
+        </div>
+        <div class="card hover:shadow-md transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-3"><span class="text-2xl">🐵</span><div><p class="font-semibold text-sm">Mailchimp</p><p class="text-xs text-gray-400">mailchimp</p></div></div>
+            <span class="badge bg-green-100 text-green-800">active</span>
+          </div>
+          <p class="text-xs text-gray-400 mb-3">Last synced: Apr 22, 2024 18:00</p>
+          <div class="flex gap-2 mt-3"><button class="text-xs py-1 px-3 border border-gray-300 rounded-lg hover:bg-gray-50">⚡ Test</button><button class="text-xs py-1 px-3 text-red-500 border border-red-200 rounded-lg hover:border-red-400">Remove</button></div>
+        </div>
+        <div class="card hover:shadow-md transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-3"><span class="text-2xl">🛍️</span><div><p class="font-semibold text-sm">Shopify</p><p class="text-xs text-gray-400">shopify</p></div></div>
+            <span class="badge bg-green-100 text-green-800">active</span>
+          </div>
+          <p class="text-xs text-gray-400 mb-3">Last synced: Apr 23, 2024 08:45</p>
+          <div class="flex gap-2 mt-3"><button class="text-xs py-1 px-3 border border-gray-300 rounded-lg hover:bg-gray-50">⚡ Test</button><button class="text-xs py-1 px-3 text-red-500 border border-red-200 rounded-lg hover:border-red-400">Remove</button></div>
+        </div>
+      </div>
+      <!-- Platform coverage -->
+      <div class="card" style="background:linear-gradient(to right,#eff6ff,#dbeafe);border-color:#bfdbfe">
+        <h3 class="text-sm font-semibold text-blue-800 mb-3">50+ Supported Platforms</h3>
+        <div class="flex flex-wrap gap-2">
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Google Ads</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Facebook</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Instagram</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">TikTok</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">LinkedIn</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Pinterest</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Amazon Ads</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Microsoft Ads</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Snapchat</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">YouTube</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">GA4</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Mixpanel</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">HubSpot</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Mailchimp</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Klaviyo</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Shopify</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Salesforce</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Stripe</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Zapier</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-gray-600 border border-gray-200 shadow-sm">Hotjar</span>
+          <span class="px-2 py-1 bg-white rounded-md text-xs text-blue-600 border border-blue-200 font-medium">+30 more</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+</div>
+
+<script>
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'flex';
+  initCharts();
+}
+
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  el.classList.add('active');
+}
+
+function initCharts() {
+  // Spend chart
+  new Chart(document.getElementById('spendChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+      datasets: [
+        { label:'Google Ads', data:[1200,1400,980,1600,1900,1100,700], backgroundColor:'#4285F4', borderRadius:4 },
+        { label:'Facebook',   data:[890,1020,760,1180,1400,830,540],  backgroundColor:'#1877F2', borderRadius:4 },
+        { label:'TikTok',     data:[430,510,390,620,780,290,190],     backgroundColor:'#111827', borderRadius:4 },
+      ]
+    },
+    options: {
+      responsive:true, plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12, font:{size:11} }}},
+      scales:{ x:{ stacked:true, grid:{display:false} }, y:{ stacked:true, grid:{color:'#F3F4F6'} }}
+    }
+  });
+  // Conversions chart
+  new Chart(document.getElementById('convChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+      datasets: [
+        { label:'Conversions', data:[34,42,28,51,63,39,22], backgroundColor:'#3B82F6', borderRadius:4, yAxisID:'y' },
+        { label:'ROAS',        data:[3.2,3.8,2.9,4.1,4.5,3.6,3.0], backgroundColor:'#10B981', borderRadius:4, yAxisID:'y2' },
+      ]
+    },
+    options: {
+      responsive:true,
+      plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12, font:{size:11} }}},
+      scales:{
+        x:{ grid:{display:false} },
+        y:{ position:'left',  grid:{color:'#F3F4F6'} },
+        y2:{ position:'right', grid:{display:false} }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
