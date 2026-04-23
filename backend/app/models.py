@@ -88,7 +88,7 @@ class Integration(Base):
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
     platform = Column(String(100), nullable=False)
     display_name = Column(String(255))
-    credentials = Column(JSON)  # encrypted in production
+    credentials = Column(Text)   # AES-256-GCM encrypted blob (base64)
     status = Column(Enum(IntegrationStatus), default=IntegrationStatus.pending)
     last_synced_at = Column(DateTime(timezone=True))
     error_message = Column(Text)

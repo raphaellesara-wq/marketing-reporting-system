@@ -7,6 +7,8 @@ from datetime import datetime
 from app.database import get_db
 from app.models import Integration, Client, IntegrationStatus, User
 from app.routes.auth import get_current_user
+from app.security.encryption import encrypt_credentials, decrypt_credentials
+from app.config import settings
 
 router = APIRouter(prefix="/integrations", tags=["Integrations"])
 
@@ -39,18 +41,19 @@ SUPPORTED_PLATFORMS = [
 class IntegrationCreate(BaseModel):
     platform: str
     display_name: Optional[str] = None
-    credentials: Dict[str, Any]
+    credentials: Dict[str, Any]          # plain on the way IN only
     config: Optional[Dict[str, Any]] = None
 
 
 class IntegrationUpdate(BaseModel):
     display_name: Optional[str] = None
-    credentials: Optional[Dict[str, Any]] = None
+    credentials: Optional[Dict[str, Any]] = None   # plain on the way IN only
     config: Optional[Dict[str, Any]] = None
     status: Optional[IntegrationStatus] = None
 
 
 class IntegrationResponse(BaseModel):
+    """Credentials are intentionally excluded from all API responses."""
     id: int
     client_id: int
     platform: str
@@ -74,6 +77,25 @@ def _get_client_or_404(client_id: int, user_id: int, db: Session) -> Client:
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     return client
+
+
+def _get_integration_or_404(integration_id: int, user_id: int, db: Session) -> Integration:
+    integration = (
+        db.query(Integration)
+        .join(Client)
+        .filter(Integration.id == integration_id, Client.owner_id == user_id)
+        .first()
+    )
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integration not found")
+    return integration
+
+
+def get_decrypted_credentials(integration: Integration) -> Dict[str, Any]:
+    """Decrypt credentials for internal service use — never call from API response paths."""
+    if not integration.credentials:
+        return {}
+    return decrypt_credentials(integration.credentials, settings.encryption_key)
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -105,18 +127,19 @@ def create_integration(
     if payload.platform not in SUPPORTED_PLATFORMS:
         raise HTTPException(status_code=400, detail=f"Unsupported platform: {payload.platform}")
 
-    existing = db.query(Integration).filter(
+    if db.query(Integration).filter(
         Integration.client_id == client_id,
         Integration.platform == payload.platform,
-    ).first()
-    if existing:
+    ).first():
         raise HTTPException(status_code=409, detail="Integration already exists for this platform")
+
+    encrypted = encrypt_credentials(payload.credentials, settings.encryption_key)
 
     integration = Integration(
         client_id=client_id,
         platform=payload.platform,
         display_name=payload.display_name or payload.platform.replace("_", " ").title(),
-        credentials=payload.credentials,
+        credentials=encrypted,
         config=payload.config or {},
         status=IntegrationStatus.pending,
     )
@@ -132,15 +155,7 @@ def get_integration(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    integration = (
-        db.query(Integration)
-        .join(Client)
-        .filter(Integration.id == integration_id, Client.owner_id == current_user.id)
-        .first()
-    )
-    if not integration:
-        raise HTTPException(status_code=404, detail="Integration not found")
-    return integration
+    return _get_integration_or_404(integration_id, current_user.id, db)
 
 
 @router.put("/{integration_id}", response_model=IntegrationResponse)
@@ -150,16 +165,17 @@ def update_integration(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    integration = (
-        db.query(Integration)
-        .join(Client)
-        .filter(Integration.id == integration_id, Client.owner_id == current_user.id)
-        .first()
-    )
-    if not integration:
-        raise HTTPException(status_code=404, detail="Integration not found")
+    integration = _get_integration_or_404(integration_id, current_user.id, db)
 
-    for key, value in payload.model_dump(exclude_none=True).items():
+    update_data = payload.model_dump(exclude_none=True)
+
+    # Re-encrypt new credentials if provided
+    if "credentials" in update_data:
+        update_data["credentials"] = encrypt_credentials(
+            update_data["credentials"], settings.encryption_key
+        )
+
+    for key, value in update_data.items():
         setattr(integration, key, value)
 
     db.commit()
@@ -173,15 +189,7 @@ def delete_integration(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    integration = (
-        db.query(Integration)
-        .join(Client)
-        .filter(Integration.id == integration_id, Client.owner_id == current_user.id)
-        .first()
-    )
-    if not integration:
-        raise HTTPException(status_code=404, detail="Integration not found")
-
+    integration = _get_integration_or_404(integration_id, current_user.id, db)
     db.delete(integration)
     db.commit()
 
@@ -192,16 +200,12 @@ def test_integration(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    integration = (
-        db.query(Integration)
-        .join(Client)
-        .filter(Integration.id == integration_id, Client.owner_id == current_user.id)
-        .first()
-    )
-    if not integration:
-        raise HTTPException(status_code=404, detail="Integration not found")
+    integration = _get_integration_or_404(integration_id, current_user.id, db)
 
-    # TODO: trigger actual connection test via service layer
+    # Decrypt internally for connection test — never returned to client
+    _ = get_decrypted_credentials(integration)
+
+    # TODO: pass decrypted credentials to the appropriate service and run test_connection()
     integration.status = IntegrationStatus.active
     integration.error_message = None
     db.commit()

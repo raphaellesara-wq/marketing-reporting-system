@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 30
 
+    # AES-256 key for credential encryption (64 hex chars = 32 bytes)
+    # Generate with: python -c "import os; print(os.urandom(32).hex())"
+    encryption_key: str = "0" * 64  # MUST be overridden in production
+
     database_url: str = "postgresql://mruser:mrpassword@postgres:5432/marketing_reporting"
     redis_url: str = "redis://redis:6379/0"
     celery_broker_url: str = "redis://redis:6379/1"
