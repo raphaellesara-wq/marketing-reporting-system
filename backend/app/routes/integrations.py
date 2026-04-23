@@ -8,6 +8,7 @@ from app.database import get_db
 from app.models import Integration, Client, IntegrationStatus, User
 from app.routes.auth import get_current_user
 from app.security.encryption import encrypt_credentials, decrypt_credentials
+from app.security.tenancy import get_owned_integration
 from app.config import settings
 
 router = APIRouter(prefix="/integrations", tags=["Integrations"])
@@ -79,18 +80,6 @@ def _get_client_or_404(client_id: int, user_id: int, db: Session) -> Client:
     return client
 
 
-def _get_integration_or_404(integration_id: int, user_id: int, db: Session) -> Integration:
-    integration = (
-        db.query(Integration)
-        .join(Client)
-        .filter(Integration.id == integration_id, Client.owner_id == user_id)
-        .first()
-    )
-    if not integration:
-        raise HTTPException(status_code=404, detail="Integration not found")
-    return integration
-
-
 def get_decrypted_credentials(integration: Integration) -> Dict[str, Any]:
     """Decrypt credentials for internal service use — never call from API response paths."""
     if not integration.credentials:
@@ -150,23 +139,16 @@ def create_integration(
 
 
 @router.get("/{integration_id}", response_model=IntegrationResponse)
-def get_integration(
-    integration_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    return _get_integration_or_404(integration_id, current_user.id, db)
+def get_integration(integration: Integration = Depends(get_owned_integration)):
+    return integration
 
 
 @router.put("/{integration_id}", response_model=IntegrationResponse)
 def update_integration(
-    integration_id: int,
     payload: IntegrationUpdate,
-    current_user: User = Depends(get_current_user),
+    integration: Integration = Depends(get_owned_integration),
     db: Session = Depends(get_db),
 ):
-    integration = _get_integration_or_404(integration_id, current_user.id, db)
-
     update_data = payload.model_dump(exclude_none=True)
 
     # Re-encrypt new credentials if provided
@@ -185,23 +167,18 @@ def update_integration(
 
 @router.delete("/{integration_id}", status_code=204)
 def delete_integration(
-    integration_id: int,
-    current_user: User = Depends(get_current_user),
+    integration: Integration = Depends(get_owned_integration),
     db: Session = Depends(get_db),
 ):
-    integration = _get_integration_or_404(integration_id, current_user.id, db)
     db.delete(integration)
     db.commit()
 
 
 @router.post("/{integration_id}/test", response_model=dict)
 def test_integration(
-    integration_id: int,
-    current_user: User = Depends(get_current_user),
+    integration: Integration = Depends(get_owned_integration),
     db: Session = Depends(get_db),
 ):
-    integration = _get_integration_or_404(integration_id, current_user.id, db)
-
     # Decrypt internally for connection test — never returned to client
     _ = get_decrypted_credentials(integration)
 

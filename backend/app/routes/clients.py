@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
@@ -7,6 +7,7 @@ from datetime import datetime
 from app.database import get_db
 from app.models import Client, User
 from app.routes.auth import get_current_user
+from app.security.tenancy import get_owned_client
 
 router = APIRouter(prefix="/clients", tags=["Clients"])
 
@@ -82,35 +83,18 @@ def create_client(
 
 
 @router.get("/{client_id}", response_model=ClientResponse)
-def get_client(
-    client_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    client = db.query(Client).filter(
-        Client.id == client_id, Client.owner_id == current_user.id
-    ).first()
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
+def get_client(client: Client = Depends(get_owned_client)):
     return client
 
 
 @router.put("/{client_id}", response_model=ClientResponse)
 def update_client(
-    client_id: int,
     payload: ClientUpdate,
-    current_user: User = Depends(get_current_user),
+    client: Client = Depends(get_owned_client),
     db: Session = Depends(get_db),
 ):
-    client = db.query(Client).filter(
-        Client.id == client_id, Client.owner_id == current_user.id
-    ).first()
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
-
     for key, value in payload.model_dump(exclude_none=True).items():
         setattr(client, key, value)
-
     db.commit()
     db.refresh(client)
     return client
@@ -118,15 +102,8 @@ def update_client(
 
 @router.delete("/{client_id}", status_code=204)
 def delete_client(
-    client_id: int,
-    current_user: User = Depends(get_current_user),
+    client: Client = Depends(get_owned_client),
     db: Session = Depends(get_db),
 ):
-    client = db.query(Client).filter(
-        Client.id == client_id, Client.owner_id == current_user.id
-    ).first()
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
-
     client.is_active = False
     db.commit()

@@ -7,6 +7,7 @@ from datetime import datetime
 from app.database import get_db
 from app.models import Report, Client, ReportFormat, ReportFrequency, ReportStatus, User
 from app.routes.auth import get_current_user
+from app.security.tenancy import get_owned_client, get_owned_report
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -49,12 +50,10 @@ def _generate_report_task(report_id: int, db_url: str):
     """Placeholder — replaced by Celery task in production."""
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from app.models import Report, ReportStatus
-    from datetime import datetime
 
     engine = create_engine(db_url)
-    Session = sessionmaker(bind=engine)
-    db = Session()
+    SessionLocal = sessionmaker(bind=engine)
+    db = SessionLocal()
     try:
         report = db.query(Report).filter(Report.id == report_id).first()
         if report:
@@ -89,75 +88,41 @@ def create_report(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # get_owned_client enforces tenant isolation on the target client
     client = db.query(Client).filter(
-        Client.id == payload.client_id, Client.owner_id == current_user.id
+        Client.id == payload.client_id,
+        Client.owner_id == current_user.id,
+        Client.is_active == True,
     ).first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
 
-    report = Report(
-        **payload.model_dump(),
-        status=ReportStatus.pending,
-    )
+    report = Report(**payload.model_dump(), status=ReportStatus.pending)
     db.add(report)
     db.commit()
     db.refresh(report)
 
     from app.config import settings
     background_tasks.add_task(_generate_report_task, report.id, settings.database_url)
-
     return report
 
 
 @router.get("/{report_id}", response_model=ReportResponse)
-def get_report(
-    report_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    report = (
-        db.query(Report)
-        .join(Client)
-        .filter(Report.id == report_id, Client.owner_id == current_user.id)
-        .first()
-    )
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
+def get_report(report: Report = Depends(get_owned_report)):
     return report
 
 
 @router.delete("/{report_id}", status_code=204)
 def delete_report(
-    report_id: int,
-    current_user: User = Depends(get_current_user),
+    report: Report = Depends(get_owned_report),
     db: Session = Depends(get_db),
 ):
-    report = (
-        db.query(Report)
-        .join(Client)
-        .filter(Report.id == report_id, Client.owner_id == current_user.id)
-        .first()
-    )
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
     db.delete(report)
     db.commit()
 
 
 @router.get("/{report_id}/status")
-def get_report_status(
-    report_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    report = (
-        db.query(Report)
-        .join(Client)
-        .filter(Report.id == report_id, Client.owner_id == current_user.id)
-        .first()
-    )
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
+def get_report_status(report: Report = Depends(get_owned_report)):
     return {
         "id": report.id,
         "status": report.status,
