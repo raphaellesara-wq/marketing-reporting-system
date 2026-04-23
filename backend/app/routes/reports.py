@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -7,7 +7,7 @@ from datetime import datetime
 from app.database import get_db
 from app.models import Report, Client, ReportFormat, ReportFrequency, ReportStatus, User
 from app.routes.auth import get_current_user
-from app.security.tenancy import get_owned_client, get_owned_report
+from app.security.tenancy import get_owned_report
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -44,27 +44,6 @@ class ReportResponse(BaseModel):
         from_attributes = True
 
 
-# ── Background task ───────────────────────────────────────────────────────────
-
-def _generate_report_task(report_id: int, db_url: str):
-    """Placeholder — replaced by Celery task in production."""
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-
-    engine = create_engine(db_url)
-    SessionLocal = sessionmaker(bind=engine)
-    db = SessionLocal()
-    try:
-        report = db.query(Report).filter(Report.id == report_id).first()
-        if report:
-            report.status = ReportStatus.completed
-            report.generated_at = datetime.utcnow()
-            report.file_url = f"/reports/{report_id}/download"
-            db.commit()
-    finally:
-        db.close()
-
-
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.get("/", response_model=List[ReportResponse])
@@ -84,7 +63,6 @@ def list_reports(
 @router.post("/", response_model=ReportResponse, status_code=201)
 def create_report(
     payload: ReportCreate,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -102,8 +80,8 @@ def create_report(
     db.commit()
     db.refresh(report)
 
-    from app.config import settings
-    background_tasks.add_task(_generate_report_task, report.id, settings.database_url)
+    from app.tasks import generate_report
+    generate_report.delay(report.id)
     return report
 
 
